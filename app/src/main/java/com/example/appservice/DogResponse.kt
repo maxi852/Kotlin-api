@@ -1,11 +1,9 @@
-package com.example.dogbreeds
+package com.example.appservice
 
 import com.google.gson.annotations.SerializedName
 
-
-data class DogResponse (
-
-    @SerializedName("message") var images: MutableList<String> = mutableListOf<String>(),
+data class DogResponse(
+    @SerializedName("message") var images: List<String>,
     @SerializedName("status") var status  : String? = null
 
 )
