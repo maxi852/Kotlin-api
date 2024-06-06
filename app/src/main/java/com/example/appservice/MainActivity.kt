@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -21,6 +22,7 @@ class MainActivity : AppCompatActivity() {
     private var dogsListImage = mutableListOf<String>()
     private var breedsList = mutableListOf<String>()
 
+    val job = Job()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -30,7 +32,7 @@ class MainActivity : AppCompatActivity() {
         spinner = findViewById(R.id.spinner)
         adapter = DogsAdapter(dogsListImage)
         recyclerView.adapter = adapter
-        //getListImages()
+
         getListOfBreeds()
     }
 
@@ -45,7 +47,7 @@ class MainActivity : AppCompatActivity() {
                     if (breedsMap != null) {
                         for (breed in breedsMap.keys)
                             breedsList.add(breed)
-
+                        setSpinner()
 
                     }
                 }
@@ -54,15 +56,32 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun setSpinner() {
+        val spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, breedsList)
+        spinner.adapter = spinnerAdapter
 
-    private fun getListImages() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val call = getRetrofit().create(ApiService::class.java).getListaImagenes("breed/hound/images")
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener{
+            override fun onItemSelected(p0: AdapterView<*>?, p1: View?, position: Int, p3: Long) {
+                getListImages(breedsList[position])
+            }
+
+            override fun onNothingSelected(p0: AdapterView<*>?) {
+                TODO("Not yet implemented")
+            }
+
+        }
+
+    }
+
+    private fun getListImages(breed: String?) {
+        CoroutineScope(Dispatchers.IO + job).launch {
+            val call = getRetrofit().create(ApiService::class.java).getListaImagenes("breed/$breed/images")
             val response = call.body()
             runOnUiThread {
                 if (call.isSuccessful) {
                     //si la response es null, seteo listado vacio para que no rompa
                     val images = response?.images ?: emptyList()
+                    dogsListImage.clear()
                     dogsListImage.addAll(images)
                     adapter.notifyDataSetChanged()
                 }
@@ -80,5 +99,10 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val URL_DOGS = "https://dog.ceo/api/"
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        job.cancel()
     }
 }
